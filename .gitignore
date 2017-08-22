@@ -11,4 +11,5 @@ pip-selfcheck.json
 pyvenv.cfg
 *.log
 *.txt
+*.xslx
 !requirements.txt
