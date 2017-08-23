@@ -21,6 +21,7 @@ def configurate_cmd_parser():
     cmd_arguments.add_argument('--filepath', '-f', type=str, default='result_file.xlsx')
     return cmd_arguments.parse_args()
 
+
 def get_coursera_courses_list(quantity):
     coursera_sitemap_url = 'https://www.coursera.org/sitemap~www~courses.xml'
     courses_text_response = requests.get(coursera_sitemap_url).text
