@@ -5,6 +5,12 @@ from collections import OrderedDict
 import re
 import requests
 import random
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logger = logging.getLogger()
 
 
 def get_coursera_courses_list(quantity):
@@ -18,52 +24,53 @@ def get_coursera_courses_list(quantity):
 
 
 def get_course_info(course_url):
+    logger.info('fetching {} ...'.format(course_url))
     course_text_response = requests.get(course_url).content
     course_parser = BeautifulSoup(course_text_response, 'html.parser')
-    coursera_course_name = course_parser.find('h1', {'class': 'title'}).text
-    coursera_course_language = re.findall('^[a-zA-Z]+', course_parser.find('div', {'class': 'rc-Language'}).text)[0]
-    try:
-        coursera_course_rating = re.findall('[\d.]+', course_parser.find('div', {'class': 'ratings-text'}).text)[0]
-    except AttributeError:
-        coursera_course_rating = ''
-    try:
-        coursera_course_start_date = course_parser.find('div', {'class': 'rc-StartDateString'}).text
-    except:
-        coursera_course_start_date = ''
-    try:
-        coursera_course_duration = course_parser.find('td', {'class': 'td-data'}).text
-    except:
-        coursera_course_duration = ''
-    parse_results = OrderedDict([
-        ('course_name', coursera_course_name),
-        ('course_language', coursera_course_language),
-        ('course_rating', coursera_course_rating),
-        ('course_start_date', coursera_course_start_date),
-        ('course_duration', coursera_course_duration),
-        ('courrse_url', course_url)
-    ])
-    return parse_results
+    tags_processing_data = {
+        'course_name': [course_parser.find('h1', class_='title'), None],
+        'course_language': [course_parser.find('div', class_='rc-Language'), re.compile(r'^[a-zA-Z]+')],
+        'course_start_date': [course_parser.find('div', class_='rc-StartDateString'), None],
+        'course_rating': [course_parser.find('div', class_='ratings-text'), re.compile(r'[\d.]+')],
+        'course_duration': [course_parser.find('td', class_='td-data'), None]
+    }
+    parse_course_results = OrderedDict()
+    for tag_name, processing_content in tags_processing_data.items():
+        tag_content = processing_content[0]
+        regexp_expression = processing_content[1]
+        if regexp_expression:
+            parse_course_results[tag_name] = regexp_expression.search(tag_content.get_text())[0]\
+                if tag_content else None
+        else:
+            parse_course_results[tag_name] = tag_content.get_text()\
+                if tag_content else None
+    parse_course_results['course_url'] = course_url
+    return parse_course_results
 
 
 def output_courses_info_to_xlsx(course_data_dicts_list, output_filepath):
+    if not course_data_dicts_list:
+        raise ValueError('Error: There must be at least one course to save')
     workbook = Workbook(write_only=True)
     worksheet = workbook.create_sheet()
-    is_write_title_row = True
+    worksheet.append(list(course_data_dicts_list[0].keys()))
     for course_data in course_data_dicts_list:
-        if is_write_title_row:
-            worksheet.append(list(course_data.keys()))
-            is_write_title_row = False
         worksheet.append(list(course_data.values()))
-    try:
-        workbook.save(output_filepath)
-    except PermissionError:
-        print('The program can not write a file with courses')
+    workbook.save(output_filepath)
 
 
 if __name__ == '__main__':
     course_quantity = 5
     result_file_name = 'result_file.xlsx'
-    coursera_courses_url_list = get_coursera_courses_list(course_quantity)
-    list_with_courses_data = [get_course_info(course_url) for course_url in coursera_courses_url_list]
-    output_courses_info_to_xlsx(list_with_courses_data, result_file_name)
-    print('The program recorded data from {} random courses on Coursera.org into file {}'.format(course_quantity, result_file_name))
+    try:
+        logger.info('fetching course urls...')
+        coursera_courses_url_list = get_coursera_courses_list(course_quantity)
+        list_with_courses_data = [get_course_info(course_url)
+                                  for course_url in coursera_courses_url_list]
+        output_courses_info_to_xlsx(list_with_courses_data, result_file_name)
+        print('The program recorded data from {} '
+              'random courses on Coursera.org into file {}'.format(course_quantity, result_file_name))
+    except ValueError as error:
+        print(error.args[0])
+    except PermissionError:
+        print('Error: The program can not write a file with courses')
