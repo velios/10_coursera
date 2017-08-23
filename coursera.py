@@ -6,12 +6,20 @@ import re
 import requests
 import random
 import logging
+import argparse
 
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.WARNING)
 logger = logging.getLogger()
 
+
+def configurate_cmd_parser():
+    parser_description = ('Script save N courses data to Excel file\n')
+    cmd_arguments = argparse.ArgumentParser(description=parser_description)
+    cmd_arguments.add_argument('--number_of_courses', '-n', type=int, default=20)
+    cmd_arguments.add_argument('--filepath', '-f', type=str, default='result_file.xlsx')
+    return cmd_arguments.parse_args()
 
 def get_coursera_courses_list(quantity):
     coursera_sitemap_url = 'https://www.coursera.org/sitemap~www~courses.xml'
@@ -60,10 +68,11 @@ def output_courses_info_to_xlsx(course_data_dicts_list, output_filepath):
 
 
 if __name__ == '__main__':
-    course_quantity = 5
-    result_file_name = 'result_file.xlsx'
+    cmd_arguments = configurate_cmd_parser()
+    course_quantity = cmd_arguments.number_of_courses
+    result_file_name = cmd_arguments.filepath
     try:
-        logger.info('fetching course urls...')
+        logger.info('Script start fetch data from {} courses ... '.format(course_quantity))
         coursera_courses_url_list = get_coursera_courses_list(course_quantity)
         list_with_courses_data = [get_course_info(course_url)
                                   for course_url in coursera_courses_url_list]
