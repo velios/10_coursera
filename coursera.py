@@ -36,23 +36,18 @@ def get_course_info(course_url):
     logger.info('fetching {} ...'.format(course_url))
     course_text_response = requests.get(course_url).content
     course_parser = BeautifulSoup(course_text_response, 'html.parser')
-    tags_processing_data = {
-        'course_name': [course_parser.find('h1', class_='title'), None],
-        'course_language': [course_parser.find('div', class_='rc-Language'), re.compile(r'^[a-zA-Z]+')],
-        'course_start_date': [course_parser.find('div', class_='rc-StartDateString'), None],
-        'course_rating': [course_parser.find('div', class_='ratings-text'), re.compile(r'[\d.]+')],
-        'course_duration': [course_parser.find('td', class_='td-data'), None]
-    }
+    tags_processing_data = OrderedDict([
+        ('course_name', [course_parser.find('h1', class_='title'), None]),
+        ('course_language', [course_parser.find('div', class_='rc-Language'), r'^[a-zA-Z]+']),
+        ('course_start_date', [course_parser.find('div', class_='rc-StartDateString'), None]),
+        ('course_rating', [course_parser.find('div', class_='ratings-text'), r'[\d.]+']),
+        ('course_duration', [course_parser.find('td', class_='td-data'), None])
+        ])
     parse_course_results = OrderedDict()
     for tag_name, processing_content in tags_processing_data.items():
         tag_content = processing_content[0]
         regexp_expression = processing_content[1]
-        if regexp_expression:
-            parse_course_results[tag_name] = regexp_expression.search(tag_content.get_text())[0]\
-                if tag_content else None
-        else:
-            parse_course_results[tag_name] = tag_content.get_text()\
-                if tag_content else None
+        parse_course_results[tag_name] = None if not tag_content else re.findall(regexp_expression, tag_content.get_text())[0] if regexp_expression else tag_content.get_text()
     parse_course_results['course_url'] = course_url
     return parse_course_results
 
