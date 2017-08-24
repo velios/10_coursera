@@ -1,6 +1,13 @@
 # Created by .ignore support plugin (hsz.mobi)
 
+[Bb]in/
+[Ii]nclude/
+[Ll]ib/
+[Ll]ib64/
+[Ss]hare/
+
 .idea/
 *.txt
 *.xlsx
+*.cfg
 !requirements.txt
