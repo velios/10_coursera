@@ -47,7 +47,9 @@ def get_course_info(course_url):
     for tag_name, processing_content in tags_processing_data.items():
         tag_content = processing_content[0]
         regexp_expression = processing_content[1]
-        parse_course_results[tag_name] = None if not tag_content else re.findall(regexp_expression, tag_content.get_text())[0] if regexp_expression else tag_content.get_text()
+        parse_course_results[tag_name] = None if not tag_content\
+            else re.findall(regexp_expression, tag_content.get_text())[0] if\
+            regexp_expression else tag_content.get_text()
     parse_course_results['course_url'] = course_url
     return parse_course_results
 
