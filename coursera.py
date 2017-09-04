@@ -1,7 +1,6 @@
 from lxml import etree
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
-from collections import OrderedDict
 import re
 import requests
 import random
@@ -36,32 +35,31 @@ def get_course_info(course_url):
     logger.info('fetching {} ...'.format(course_url))
     course_text_response = requests.get(course_url).content
     course_parser = BeautifulSoup(course_text_response, 'html.parser')
-    tags_processing_data = OrderedDict([
-        ('course_name', [course_parser.find('h1', class_='title'), None]),
-        ('course_language', [course_parser.find('div', class_='rc-Language'), r'^[a-zA-Z]+']),
-        ('course_start_date', [course_parser.find('div', class_='rc-StartDateString'), None]),
-        ('course_rating', [course_parser.find('div', class_='ratings-text'), r'[\d.]+']),
-        ('course_duration', [course_parser.find('td', class_='td-data'), None])
-        ])
-    parse_course_results = OrderedDict()
-    for tag_name, processing_content in tags_processing_data.items():
-        tag_content = processing_content[0]
-        regexp_expression = processing_content[1]
-        parse_course_results[tag_name] = None if not tag_content\
+    tags_processing_data = [
+        ('course_name',         course_parser.find('h1', class_='title'),               None),
+        ('course_language',     course_parser.find('div', class_='rc-Language'),        r'^[a-zA-Z]+'),
+        ('course_start_date',   course_parser.find('div', class_='rc-StartDateString'), None),
+        ('course_rating',       course_parser.find('div', class_='ratings-text'),       r'[\d.]+'),
+        ('course_duration',     course_parser.find('td', class_='td-data'),             None)
+        ]
+    parse_course_results = []
+    for tag_name, tag_content, regexp_expression in tags_processing_data:
+        course_data = None if not tag_content\
             else re.findall(regexp_expression, tag_content.get_text())[0] if\
             regexp_expression else tag_content.get_text()
-    parse_course_results['course_url'] = course_url
+        parse_course_results.append((tag_name, course_data))
+    parse_course_results.append(('course_url', course_url))
     return parse_course_results
 
 
-def output_courses_info_to_xlsx(course_data_dicts_list, output_filepath):
-    if not course_data_dicts_list:
+def output_courses_info_to_xlsx(courses_info_list, output_filepath):
+    if not courses_info_list:
         raise ValueError('Error: There must be at least one course to save')
     workbook = Workbook(write_only=True)
     worksheet = workbook.create_sheet()
-    worksheet.append(list(course_data_dicts_list[0].keys()))
-    for course_data in course_data_dicts_list:
-        worksheet.append(list(course_data.values()))
+    worksheet.append([course_header for course_header, course_info in courses_info_list[0]])
+    for course_info_list in courses_info_list:
+        worksheet.append([course_info for course_header, course_info in course_info_list])
     workbook.save(output_filepath)
 
 
